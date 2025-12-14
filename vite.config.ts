@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// https://vitejs.dev/config/
+// https://vite.dev/config/
 export default defineConfig({
-  base: '/paws-preferences/',  // IMPORTANT for GitHub Pages
-  plugins: [vue()]
+  plugins: [vue()],
+  base: '/paws-preferences/' // <--- your repo name here
 })

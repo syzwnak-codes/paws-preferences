@@ -1,39 +1,85 @@
 <template>
   <div class="summary-page">
-    <h1>You liked {{ likedCats.length }} cats 😺</h1>
+    <!-- Top navbar -->
+    <header class="top-nav">
+      <img src="/pink-paw.png" alt="Paw" class="logo-icon" />
+      <h3>Paws & Preferences</h3>
+    </header>
 
-    <div v-if="likedCats.length === 0" class="no-likes">
-      <p>You didn’t like any cats… surprising 😼</p>
-      <button @click="goHome">Try Again</button>
-    </div>
+    <!-- Main content -->
+    <main class="summary-content">
+      <!-- Header -->
+      <header class="summary-header">
+        <h1>
+          You liked <span>{{ likedCats.length }}</span> cats
+        </h1>
+        <p class="subtitle">
+          {{ likedCats.length
+            ? "Here are your top feline matches 😻"
+            : "No matches this time… you sure are picky 😼" }}
+        </p>
+      </header>
 
-    <div v-else class="cats-grid">
-      <div v-for="cat in likedCats" :key="cat.id" class="cat-card-summary">
-        <img :src="cat.url" />
-        <div class="tags">
-          <span v-for="tag in cat.tags" :key="tag">{{ tag }}</span>
-        </div>
+      <!-- Empty state -->
+      <div v-if="likedCats.length === 0" class="empty-state">
+        <p>Swipe differently next time!</p>
       </div>
-    </div>
 
-    <button class="retry-btn" @click="goHome">Start Over</button>
+      <!-- Liked cats -->
+      <section v-else class="cats-grid">
+        <div
+          v-for="cat in likedCats"
+          :key="cat.id"
+          class="cat-card-summary"
+        >
+          <img :src="cat.url" alt="Liked cat" />
+          <div class="card-footer">
+            <span
+              v-for="tag in cat.tags"
+              :key="tag"
+              class="tag"
+            >
+              {{ tag }}
+            </span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Sticky bottom button -->
+    <footer class="summary-footer">
+      <button class="primary-btn" @click="goHome">
+        {{ likedCats.length > 0 ? 'Start Over' : 'Try Again' }}
+      </button>
+    </footer>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+
+interface Cat {
+  id: string;
+  url: string;
+  tags: string[];
+}
 
 export default defineComponent({
   setup() {
     const route = useRoute();
     const router = useRouter();
 
-    const likedCats = JSON.parse(route.query.liked as string || "[]");
+    const likedCatsRaw: Cat[] = JSON.parse(route.query.liked as string || "[]");
 
-    const goHome = () => {
-      router.push("/");
-    };
+    const likedCats = computed(() =>
+      likedCatsRaw.map((cat: Cat) => ({
+        ...cat,
+        tags: cat.tags && cat.tags.length ? cat.tags : ["mysterious kitty"]
+      }))
+    );
+
+    const goHome = () => router.push("/");
 
     return { likedCats, goHome };
   }
@@ -42,33 +88,98 @@ export default defineComponent({
 
 <style>
 .summary-page {
-  padding: 32px;
-  text-align: center;
-  background: #fffaf5;
-  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--text-primary);
 }
 
-h1 {
+/* Top navbar */
+.top-nav {
+  top: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-main);
+  font-weight: bold;
+  font-size: 18px;
+  position: sticky;
+}
+
+.logo-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Main scrollable content */
+.summary-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px;
+  align-content: center;
+}
+
+/* Summary header */
+.summary-header {
+  text-align: center;
   margin-bottom: 24px;
 }
 
-.no-likes {
+.summary-header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.summary-header h1 span {
+  color: var(--accent-like);
+}
+
+.subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
   margin-top: 40px;
 }
 
+.empty-icon {
+  width: 64px;
+  opacity: 0.6;
+}
+
+/* Cats grid */
 .cats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-  margin: 20px auto;
-  max-width: 900px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .cats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 900px;
+    margin: 0 auto;
+  }
 }
 
 .cat-card-summary {
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-card);
 }
 
 .cat-card-summary img {
@@ -77,31 +188,43 @@ h1 {
   object-fit: cover;
 }
 
-.tags {
+.card-footer {
   padding: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.tags span {
-  background: #ffe5c2;
+.tag {
+  background: rgba(255, 255, 255, 0.08);
   padding: 4px 8px;
   border-radius: 8px;
   font-size: 12px;
+  color: var(--text-secondary);
 }
 
-.retry-btn {
-  margin-top: 26px;
-  padding: 10px 20px;
+/* Sticky bottom button */
+.summary-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-main);
+  position: sticky;
+  bottom: 0;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 14px;
   font-size: 16px;
-  background: #ffb74d;
+  font-weight: bold;
+  background: var(--accent-like);
+  color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   cursor: pointer;
 }
 
-.retry-btn:hover {
-  background: #ffa726;
+.primary-btn:active {
+  transform: scale(0.97);
 }
 </style>

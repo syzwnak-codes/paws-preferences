@@ -8,28 +8,38 @@
     @mousedown.prevent="startDrag"
     @touchstart.prevent="startDrag"
   >
-    <img :src="src" alt="cat" draggable="false" />
+
+<img
+  :src="src"
+  alt="cat"
+  draggable="false"
+  @load="loaded = true"
+  :class="{ loaded }"
+/>
 
     <!-- Overlay for swipe feedback -->
-    <div
-      class="overlay"
-      :style="{
-        backgroundColor: overlayColor,
-        opacity: overlayOpacity
-      }"
-    >
-      <span class="emoji">{{ overlayEmoji }}</span>
-    </div>
+<div class="overlay" :style="{backgroundColor: overlayColor, opacity: overlayOpacity }">
+  <img
+    v-if="overlayDirection === 'right'"
+    src="/filled-heart.png"
+    class="overlay-icon"
+  />
+  <img
+    v-else-if="overlayDirection === 'left'"
+    src="/close.png"
+    class="overlay-icon"
+  />
+</div>
 
     <div class="info-box">
-      <h3>Cat</h3>
+      <h3>Tags</h3>
       <p>{{ tags.length ? tags.join(', ') : "mysterious kitty" }}</p>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from "vue";
+import { defineComponent, ref, computed, watch } from "vue";
 
 export default defineComponent({
   props: {
@@ -39,12 +49,20 @@ export default defineComponent({
   },
   emits: ["swipe"],
   setup(_props, { emit }) { // renamed props to _props to avoid TS error
+    const loaded = ref(false);
     const translateX = ref(0);
     const translateY = ref(0);
     const rotation = ref(0);
     const startX = ref(0);
     const startY = ref(0);
     const isDragging = ref(false);
+
+    watch(
+      () => _props.src,
+      () => {
+        loaded.value = false;
+      }
+    );
 
     let animationFrame: number;
 
@@ -92,6 +110,11 @@ export default defineComponent({
     };
 
     const endDrag = () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      }
+      
       isDragging.value = false;
       const threshold = 120;
 
@@ -120,30 +143,38 @@ export default defineComponent({
       "transparent"
     );
 
-    const overlayEmoji = computed(() =>
-      translateX.value > 0 ? "❤️" :
-      translateX.value < 0 ? "❌" :
-      ""
-    );
+const overlayDirection = computed(() =>
+  translateX.value > 0 ? "right" :
+  translateX.value < 0 ? "left" :
+  null
+);
 
     const overlayOpacity = computed(() => Math.min(Math.abs(translateX.value) / 150, 1));
 
-    return { translateX, translateY, rotation, startDrag, overlayColor, overlayEmoji, overlayOpacity };
+return {
+  translateX,
+  translateY,
+  rotation,
+  startDrag,
+  overlayColor,
+  overlayOpacity,
+  overlayDirection,
+  loaded
+};
   }
 });
 </script>
 
 <style>
 .cat-card {
-  width: 300px;
-  height: 420px;
   border-radius: 18px;
   overflow: hidden;
   position: absolute;
-  background-color: #fff;
+  inset: 0;
+  background-color: var(--bg-card);
   cursor: grab;
   touch-action: none;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-card);
   transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   transform-origin: top center;
 }
@@ -153,6 +184,8 @@ export default defineComponent({
   height: 100%;
   object-fit: cover;
   user-select: none;
+  z-index: 1;
+  position: relative;
 }
 
 .cat-card:nth-child(n + 2) {
@@ -163,9 +196,16 @@ export default defineComponent({
   position: absolute;
   bottom: 0;
   width: 100%;
-  padding: 16px;
+  max-height: 200px;
+  padding: 100px 16px;
   color: white;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9),
+    rgba(0, 0, 0, 0.3),
+    transparent
+  );
+  z-index: 1;
 }
 
 .info-box h3 {
@@ -194,9 +234,47 @@ export default defineComponent({
   font-size: 64px;
   pointer-events: none;
   transition: background-color 0.2s, opacity 0.2s;
+  z-index: 5; /* <-- ensures overlay is above image and skeleton */
+}
+
+.overlay-icon {
+  width: 80px !important;
+  height: 80px !important;
+  opacity: 0.9;
+  z-index: 6; /* <-- above overlay background */
+  transform: scale(1.1);
 }
 
 .emoji {
   font-size: 64px;
 }
+
+.image-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #2a2a2a 25%,
+    #333 37%,
+    #2a2a2a 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.2s infinite;
+  z-index: 1;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.cat-card img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cat-card img.loaded {
+  opacity: 1;
+}
+
 </style>
